@@ -85,12 +85,14 @@ export default function InvoicesPage() {
                         {/* Botón crear factura */}
                         <button
                             className="btn-primary"
+                            color="purple.500"
                             onClick={handleCreateInvoice}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '8px',
                                 justifyContent: 'center',
+                                
                             }}
                         >
                             <Plus size={18} />

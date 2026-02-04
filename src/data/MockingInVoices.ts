@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IInvoice, IUser } from "../types/invoice.types";
 
 // Usuarios de prueba
