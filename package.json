@@ -9,13 +9,21 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@chakra-ui/react": "^3.0.0-next.32",
+    "@emotion/react": "^11.14.0",
+    "@hookform/resolvers": "^5.2.2",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-hook-form": "^7.71.1",
+    "xlsx": "^0.18.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.31",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
