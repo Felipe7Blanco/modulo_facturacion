@@ -10,6 +10,8 @@ import { InvoiceTable } from "@/components/invoices/InvoiceTable"
 import { mockInvoices, calculateInvoiceStats, filterInvoices } from "@/data/MockingInVoices"
 import { InvoiceStatus } from "@/types/invoice.types"
 
+
+
 export default function InvoicesPage() {
     const router = useRouter()
 
@@ -47,7 +49,7 @@ export default function InvoicesPage() {
     }
 
     return (
-        <Box minH="100vh" bg="gray.50" py={8}>
+        <Box minH="100vh" bg="purple.50" py={8}>
             <Container maxW="container.xl">
                 {/* Header */}
                 <Flex
@@ -65,9 +67,6 @@ export default function InvoicesPage() {
                         >
                             Búsqueda de Facturas
                         </Heading>
-                        <Box fontSize="sm" color="gray.600">
-                            Gestiona y consulta todas tus facturas
-                        </Box>
                     </Box>
 
                     <Flex gap={3} flexDirection={{ base: "column", sm: "row" }} w={{ base: "100%", md: "auto" }}>
@@ -92,7 +91,7 @@ export default function InvoicesPage() {
                                 alignItems: 'center',
                                 gap: '8px',
                                 justifyContent: 'center',
-                                
+
                             }}
                         >
                             <Plus size={18} />
@@ -101,8 +100,12 @@ export default function InvoicesPage() {
                     </Flex>
                 </Flex>
 
-                {/* Tarjetas de estadísticas */}
-                <InvoiceStatsCards stats={stats} />
+                <Box mb={5}>
+                    {/* Tarjetas de estadísticas */}
+                    <InvoiceStatsCards stats={stats} />
+
+                </Box>
+
 
                 {/* Filtros */}
                 <InvoiceFilters

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import './invoice-styles.css';
 
 .billing-page-container {
   padding: 1.5rem;

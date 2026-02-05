@@ -1,3 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Importar estilos personalizados de facturas */
+@import './invoice-styles.css';
+
 * {
   margin: 0;
   padding: 0;
