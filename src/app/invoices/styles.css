@@ -1,0 +1,157 @@
+
+.billing-page-container {
+  padding: 1.5rem;
+  background-color: #f8f9fa; /* Fondo gris muy suave */
+  min-height: 100vh;
+}
+
+/* --- CABECERA TIPO DASHBOARD --- */
+.dashboard-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  background-color: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 2rem;
+}
+
+/* En pantallas grandes, dividir 65% filtros / 35% métricas */
+@media (min-width: 1024px) {
+  .dashboard-header {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+/* --- SECCIÓN IZQUIERDA: FILTROS --- */
+.filters-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end; /* Alinear inputs con etiquetas */
+}
+
+/* Clase utilitaria para inputs compactos */
+.input-compact {
+  font-size: 0.875rem;
+}
+
+.quick-filter-label {
+  font-size: 0.75rem;
+  color: #718096;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.quick-filter-options {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #a0aec0;
+}
+
+.quick-filter-options span {
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.quick-filter-options span:hover {
+  color: #805ad5; /* Purple 500 */
+}
+
+/* --- SECCIÓN DERECHA: MÉTRICAS Y ACCIONES --- */
+.metrics-section {
+  display: flex;
+  gap: 1rem;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 1.5rem;
+}
+
+/* Iconos verticales (Reporte, Num, Actualizar) */
+.vertical-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: #805ad5;
+}
+
+.action-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.action-icon-box {
+  background-color: #f3e8ff; /* Purple 50 */
+  padding: 8px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+  transition: background 0.2s;
+}
+
+.action-icon-box:hover {
+  background-color: #d6bcfa;
+}
+
+/* Panel de métricas (Números grandes) */
+.metrics-display {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metrics-row {
+  display: flex;
+  justify-content: space-around;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metric-number {
+  font-size: 2rem;
+  font-weight: 300;
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  color: #718096;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Botones principales en la columna derecha */
+.main-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Ajustes de tabla */
+.table-container {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  overflow: hidden;
+}

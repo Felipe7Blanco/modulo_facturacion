@@ -6,7 +6,7 @@ import { Providers } from "@/lib/providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Sistema de Facturación",
+  title: "Modulo de facturación",
   description: "Módulo de gestión de facturas",
 };
 
