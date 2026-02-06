@@ -108,7 +108,7 @@ export function InvoiceFilters({
         <Box>
           <Text fontSize="xs" color="gray.500" mb={1}>Cliente</Text>
           <select
-            placeholder="Buscar por cliente"
+            
             style={{
               fontSize: '0.875rem',
               padding: '0.5rem',
