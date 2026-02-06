@@ -47,9 +47,8 @@ export default function InvoicesPage() {
             return matchesClient && matchesInvoiceNumber;
         });
 
-        // 2. Pasamos el resto a tu helper
-        // Nota: Asegúrate de que tu helper 'filterInvoices' también use las propiedades correctas internamente.
-        // Si el helper usa 'search' genérico, le pasamos '' aquí porque ya filtramos el texto arriba.
+        // 2. Pasamos el resto a  helper
+
         return filterInvoices(data, {
             search: '',
             status: statusValue || undefined,
