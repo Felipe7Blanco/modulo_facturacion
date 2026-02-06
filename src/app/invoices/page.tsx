@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react"
 import { Box, Container, Flex, Heading, Button, Grid, Text } from "@chakra-ui/react"
 import { Divider } from "@chakra-ui/layout"
-import { Plus, RotateCcw, FileText, Settings } from "lucide-react"
+import { Plus, RotateCcw, FileText, Settings, Send } from "lucide-react" // Agregué el icono Send
 import { useRouter } from "next/navigation"
 import { InvoiceStatsCards } from "@/app/invoices/components/InvoiceStatsCards"
 import { InvoiceFilters } from "@/app/invoices/components/InvoiceFilters"
@@ -15,24 +15,21 @@ export default function InvoicesPage() {
     const router = useRouter()
 
     // Estados
-
-    // REEMPLAZA el estado de searchValue por estos dos:
     const [clientSearch, setClientSearch] = useState('')
     const [invoiceSearch, setInvoiceSearch] = useState('')
-
     const [statusValue, setStatusValue] = useState<InvoiceStatus | ''>('')
     const [startDate, setStartDate] = useState('')
     const [endDate, setEndDate] = useState('')
     const [isLoading] = useState(false)
 
-    // Lógica de filtrado por estados y búsqueda
-    const filteredInvoices = useMemo(() => {
-        // 1. Filtro local específico para separar los inputs
-        let data = mockInvoices.filter(invoice => {
-            // CORRECCIÓN BASADA EN TU INTERFAZ (IInvoice):
-            // Usamos 'customer' en lugar de 'client'
-            // Usamos 'invoiceNumber' en lugar de 'number'
+    // Función para refrescar
+    const handleRefresh = () => {
+        window.location.reload()
+    }
 
+    // Lógica de filtrado
+    const filteredInvoices = useMemo(() => {
+        let data = mockInvoices.filter(invoice => {
             const customerName = invoice.customer?.name || "";
             const currentInvoiceNumber = invoice.invoiceNumber || "";
 
@@ -47,12 +44,10 @@ export default function InvoicesPage() {
             return matchesClient && matchesInvoiceNumber;
         });
 
-        // 2. Pasamos el resto a  helper
-
         return filterInvoices(data, {
             search: '',
             status: statusValue || undefined,
-            startDate: startDate ? new Date(startDate) : undefined, // Convertimos string a Date si tu helper espera Date
+            startDate: startDate ? new Date(startDate) : undefined,
             endDate: endDate ? new Date(endDate) : undefined,
         })
     }, [clientSearch, invoiceSearch, statusValue, startDate, endDate])
@@ -61,10 +56,6 @@ export default function InvoicesPage() {
         return calculateInvoiceStats(filteredInvoices)
     }, [filteredInvoices])
 
-    /**==============================================================================================
-     * ================ INICIO DE LA PÁGINA DE FACTURAS CON PANEL DE CONTROL UNIFICADO ==============
-     * ==============================================================================================
-     */
     return (
         <Box minH="200vh" bg="purple.100" py={8}>
             <Container maxW="container.xl">
@@ -72,23 +63,20 @@ export default function InvoicesPage() {
                 {/* === PANEL DE CONTROL UNIFICADO === */}
                 <Box bg="white" p={6} borderRadius="xl" boxShadow="sm" mb={6}>
 
-                    {/* Título dentro de la caja */}
                     <Heading size="xl" color="purple.600" mb={1}>
                         Búsqueda de Facturas
                     </Heading>
 
-                    {/* Layout dividido: Filtros (Izquierda) | Panel Acciones (Derecha) */}
+                    {/* Layout dividido: 7 partes Filtros | separador | 4 partes Stats */}
                     <Grid templateColumns={{ base: "1fr", lg: "7fr 1px 4fr" }} gap={4}>
 
-                        {/* COLUMNA IZQUIERDA: Filtros */}
+                        {/* === COLUMNA IZQUIERDA: Filtros y Botones de Acción === */}
                         <Box>
                             <InvoiceFilters
-                                // NUEVOS PROPS
                                 clientSearch={clientSearch}
                                 onClientSearchChange={setClientSearch}
                                 invoiceSearch={invoiceSearch}
                                 onInvoiceSearchChange={setInvoiceSearch}
-                                // Props que ya tenías (manténlos)
                                 statusValue={statusValue}
                                 startDate={startDate}
                                 endDate={endDate}
@@ -97,18 +85,43 @@ export default function InvoicesPage() {
                                     setStartDate(start)
                                     setEndDate(end)
                                 }}
-                            // BORRA: searchValue={searchValue} y onSearchChange={...}
                             />
+                            
+                            
+                            {/* BOTONES EXPANDIDOS (Llenan el espacio restante) */}
+                            <Flex gap={3} mt={6} width="full">
+                                <Button
+                                    variant="outline"
+                                    colorPalette="purple" // Ajustado a V3
+                                    size="md"
+                                    flex={1} // <--- ESTA ES LA CLAVE: Hace que ocupe el 50%
+                                >
+                                    <Send size={16} style={{ marginRight: '8px' }} />
+                                    Envío masivo a la DIAN
+                                </Button>
+
+                                <Button
+                                    bg="purple.500"
+                                    color="white"
+                                    _hover={{ bg: "purple.600" }}
+                                    size="md"
+                                    flex={1} // <--- ESTA ES LA CLAVE: Hace que ocupe el otro 50%
+                                    onClick={() => router.push('/invoices/create')}
+                                >
+                                    <Plus size={18} style={{ marginRight: '8px' }} />
+                                    Crear factura
+                                </Button>
+                            </Flex>
                         </Box>
 
                         {/* SEPARADOR VERTICAL */}
                         <Divider orientation="vertical" h="100%" borderColor="gray.200" display={{ base: "none", lg: "block" }} />
 
-                        {/* COLUMNA DERECHA: Acciones y KPIs */}
-                        <Flex direction="column" justify="space-between">
+                        {/* === COLUMNA DERECHA: Iconos y Stats (Ahora más limpia) === */}
+                        <Flex direction="column">
 
-                            {/* Iconos de herramientas (Superior) */}
-                            <Flex justify="space-around" color="purple.500" mb={4}>
+                            {/* Iconos de herramientas (Bajados para mejor estética) */}
+                            <Flex justify="space-around" color="purple.500" mb={8} mt={8}>
                                 <Flex direction="column" align="center" cursor="pointer" _hover={{ color: "purple.700" }}>
                                     <FileText size={18} />
                                     <Text fontSize="xs" mt={1}>Reporte</Text>
@@ -117,39 +130,22 @@ export default function InvoicesPage() {
                                     <Settings size={18} />
                                     <Text fontSize="xs" mt={1}>Ajustes</Text>
                                 </Flex>
-                                <Flex direction="column" align="center" cursor="pointer" _hover={{ color: "purple.700" }}>
+                                <Flex 
+                                    direction="column" 
+                                    align="center" 
+                                    cursor="pointer" 
+                                    _hover={{ color: "purple.700" }}
+                                    onClick={handleRefresh}
+                                >
                                     <RotateCcw size={18} />
                                     <Text fontSize="xs" mt={1}>Actualizar</Text>
                                 </Flex>
                             </Flex>
 
-                            {/* Estadísticas integradas */}
-                            <Box mb={4}>
-
+                            {/* Estadísticas */}
+                            <Box>
                                 <InvoiceStatsCards stats={stats} />
                             </Box>
-
-                            {/* Botones de Acción */}
-                            <Flex gap={3} direction="column">
-                                <Button
-                                    bg="purple.500"
-                                    color="white"
-                                    _hover={{ bg: "purple.600" }}
-                                    width="full"
-                                    onClick={() => router.push('/invoices/create')}
-                                >
-                                    <Plus size={18} style={{ marginRight: '8px' }} />
-                                    Crear factura
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    colorScheme="purple"
-                                    width="full"
-                                    fontSize="sm"
-                                >
-                                    Envío masivo a la DIAN
-                                </Button>
-                            </Flex>
 
                         </Flex>
                     </Grid>

@@ -4,13 +4,10 @@ import { Box, Input, Text, Grid } from "@chakra-ui/react"
 import { InvoiceStatus } from "@/types/invoice.types"
 
 interface InvoiceFiltersProps {
-  // AGREGA ESTO:
   clientSearch: string
   onClientSearchChange: (value: string) => void
   invoiceSearch: string
   onInvoiceSearchChange: (value: string) => void
-
-  // MANTÉN EL RESTO IGUAL:
   onStatusChange: (value: InvoiceStatus | '') => void
   onDateRangeChange: (start: string, end: string) => void
   statusValue: InvoiceStatus | ''
@@ -30,9 +27,7 @@ export function InvoiceFilters({
   endDate,
 }: InvoiceFiltersProps) {
 
-  // === LÓGICA COMBO BOX ===
   const statusOptions: Array<{ value: InvoiceStatus | '', label: string }> = [
-
     { value: '', label: 'Todos los estados' },
     { value: 'draft', label: 'Borrador' },
     { value: 'pending', label: 'Pendiente' },
@@ -43,17 +38,16 @@ export function InvoiceFilters({
   ]
 
   return (
-    <Box width="100%">
+    <Box width="100%" mb={4}> {/* Margen inferior extra para separar del botón crear */}
 
-      {/* Fila 1: Búsquedas de texto */}
+      {/* Fila 1: Búsquedas de texto (Cliente y Factura) */}
       <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4} mb={4}>
         <Box>
-          <Text fontSize="xs" color="black.50" mb={1}>Búsqueda por nombre de cliente</Text>
-          {/* Input de CLIENTE */}
+          <Text fontSize="xs" color="gray.500" mb={1}>Búsqueda por nombre de cliente</Text>
           <Input
             placeholder="Ejemplo: Juan"
-            value={clientSearch}  // <-- CAMBIO AQUÍ
-            onChange={(e) => onClientSearchChange(e.target.value)} // <-- CAMBIO AQUÍ
+            value={clientSearch}
+            onChange={(e) => onClientSearchChange(e.target.value)}
             size="sm"
             borderRadius="md"
             bg="gray.50"
@@ -61,12 +55,11 @@ export function InvoiceFilters({
           />
         </Box>
         <Box>
-          <Text fontSize="xs" color="black.50" mb={1}>Búsqueda por factura</Text>
-          {/* Input de FACTURA */}
-           <Input
+          <Text fontSize="xs" color="gray.500" mb={1}>Búsqueda por factura</Text>
+          <Input
             placeholder="Ejemplo: TW0001"
-            value={invoiceSearch} // <-- CAMBIO AQUÍ
-            onChange={(e) => onInvoiceSearchChange(e.target.value)} // <-- CAMBIO AQUÍ
+            value={invoiceSearch}
+            onChange={(e) => onInvoiceSearchChange(e.target.value)}
             size="sm"
             borderRadius="md"
             bg="gray.50"
@@ -75,8 +68,8 @@ export function InvoiceFilters({
         </Box>
       </Grid>
 
-      {/* Fila 2: Fechas */}
-      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4} mb={4}>
+      {/* Fila 2: Fechas Y Estado (Ahora todo en una línea de 3 columnas) */}
+      <Grid templateColumns={{ base: "1fr", md: "1fr 1fr 1fr" }} gap={4}>
         <Box>
           <Text fontSize="xs" color="gray.500" mb={1}>Fecha inicial</Text>
           <Input
@@ -101,29 +94,8 @@ export function InvoiceFilters({
             borderColor="gray.200"
           />
         </Box>
-      </Grid>
-
-      {/* Fila 3: Selectores (Cliente y Estado) */}
-      <Grid templateColumns={{ base: "1fr", md: "2fr 1fr 1fr" }} gap={4}>
-        <Box>
-          <Text fontSize="xs" color="gray.500" mb={1}>Cliente</Text>
-          <select
-            
-            style={{
-              fontSize: '0.875rem',
-              padding: '0.5rem',
-              backgroundColor: '#f7fafc',
-              borderRadius: '0.375rem',
-              borderColor: '#cbd5e0',
-              borderWidth: '1px',
-              width: '100%'
-            }}
-          >
-            <option value="">Buscar por cliente</option>
-          </select>
-        </Box>
-
-        {/* === SELECT DE ESTADO CORREGIDO === */}
+        
+        {/* El estado ahora vive aquí, lejos del botón de abajo */}
         <Box>
           <Text fontSize="xs" color="gray.500" mb={1}>Estado</Text>
           <select
@@ -131,12 +103,13 @@ export function InvoiceFilters({
             onChange={(e) => onStatusChange(e.target.value as InvoiceStatus | '')}
             style={{
               fontSize: '0.875rem',
-              padding: '0.5rem',
+              padding: '0.35rem', // Ajustado para coincidir visualmente con inputs sm
               backgroundColor: '#f7fafc',
               borderRadius: '0.375rem',
-              borderColor: '#cbd5e0',
+              borderColor: '#e2e8f0',
               borderWidth: '1px',
-              width: '100%'
+              width: '100%',
+              height: '32px' // Altura forzada para igualar a los inputs sm
             }}
           >
             {statusOptions.map((option) => (
@@ -147,6 +120,7 @@ export function InvoiceFilters({
           </select>
         </Box>
       </Grid>
+
     </Box>
   )
 }
