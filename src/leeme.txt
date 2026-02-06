@@ -1,0 +1,2 @@
+correr servidor :D
+npm run dev

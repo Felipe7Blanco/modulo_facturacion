@@ -15,8 +15,8 @@ import {
 } from '@chakra-ui/react'
 import { ArrowLeft, Plus, Save } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { ClientDrawer } from '@/components/invoices/ClientDrawer'
-import { InvoiceItemsTable } from '@/components/invoices/InvoiceItemsTable'
+import { ClientDrawer } from '@/app/invoices/create/components/ClientDrawer'
+import { InvoiceItemsTable } from '@/app/invoices/create/components/InvoiceItemsTable'
 import { IInvoiceItem } from '@/types/invoice.types'
 
 export default function CreateInvoicePage() {

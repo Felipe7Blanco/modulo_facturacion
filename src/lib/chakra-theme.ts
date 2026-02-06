@@ -7,7 +7,7 @@ const config = defineConfig({
       colors: {
         // Colores primarios del proyecto (tw-primary)
         brand: {
-          50: { value: "#e6f0ff" },
+          50: { value: "#f0f5ff" },
           100: { value: "#b3d4ff" },
           200: { value: "#80b8ff" },
           300: { value: "#4d9cff" },
@@ -36,7 +36,7 @@ const config = defineConfig({
           value: { base: "{colors.brand.500}", _dark: "{colors.brand.700}" }
         },
         "bg-secondary": {
-          value: { base: "#F7FAFC", _dark: "#1A202C" }
+          value: { base: "#D39AE6", _dark: "#1A202C" }
         },
         // Textos
         "text-primary": {
