@@ -1,33 +1,51 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
-    Box,
-    Container,
-    Flex,
-    Heading,
-    Button,
-    Input,
-    Stack,
-    Text,
-    Card,
+    Box, Container, Flex, Heading, Button, Input, Stack, Text, Card, IconButton, Badge
 } from '@chakra-ui/react'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, FileText, Plus, User } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ClientDrawer } from '@/app/invoices/create/components/ClientDrawer'
 import { InvoiceItemsTable } from '@/app/invoices/create/components/InvoiceItemsTable'
-import { IInvoiceItem } from '@/types/invoice.types'
+import { IInvoiceItem, IUser } from '@/types/invoice.types'
+import { Grid } from '@chakra-ui/layout'
+import { mockUsers } from '@/data/MockingInVoices'
+// IMPORTANTE: Importamos el guardado real
+import { saveInvoice } from '@/utils/invoiceStorage'
+
+const EXCHANGE_RATES: Record<string, number> = { 'COP': 1, 'USD': 4050.50, 'EUR': 4320.10 }
+
+const CONSUMIDOR_FINAL: IUser = {
+    _id: 'cf-generic',
+    name: 'CONSUMIDOR FINAL',
+    email: '',
+    avatar: { url: '' }
+}
 
 export default function CreateInvoicePage() {
     const router = useRouter()
     const [isClientDrawerOpen, setIsClientDrawerOpen] = useState(false)
+    const [isSaving, setIsSaving] = useState(false)
+    const [isConsumerFinal, setIsConsumerFinal] = useState(false)
+    
+    // Estado para manejar lista combinada de clientes (Mock + Nuevos Locales)
+    const [availableClients, setAvailableClients] = useState<IUser[]>(mockUsers)
 
-    // Estado del formulario
+    // Cargar clientes guardados localmente al iniciar
+    useEffect(() => {
+        const savedClientsStr = localStorage.getItem('localClients')
+        if (savedClientsStr) {
+            const savedClients = JSON.parse(savedClientsStr)
+            setAvailableClients([...mockUsers, ...savedClients])
+        }
+    }, [])
+
     const [formData, setFormData] = useState({
         invoiceType: 'venta',
         currency: 'COP',
-        customer: null as any,
+        customer: null as IUser | null,
         issueDate: new Date().toISOString().split('T')[0],
         dueDate: new Date().toISOString().split('T')[0],
         paymentMethod: 'efectivo',
@@ -36,21 +54,13 @@ export default function CreateInvoicePage() {
         notes: '',
     })
 
-    // Items de la factura
     const [items, setItems] = useState<IInvoiceItem[]>([
         {
             _id: `item-${Date.now()}`,
-            name: '',
-            description: '',
-            price: 0,
-            quantity: 1,
-            discount: 0,
-            tax: 0,
-            total: 0,
+            name: '', description: '', price: 0, quantity: 1, discount: 0, tax: 0, total: 0,
         },
     ])
 
-    // Opciones de tipo de factura
     const invoiceTypes = [
         { value: 'venta', label: 'Factura de Venta' },
         { value: 'exportacion', label: 'Factura de Exportación' },
@@ -58,7 +68,6 @@ export default function CreateInvoicePage() {
         { value: 'mandato', label: 'Factura de Mandato' },
     ]
 
-    // Opciones de método de pago
     const paymentMethods = [
         { value: 'efectivo', label: 'Efectivo' },
         { value: 'giro-referenciado', label: 'Giro Referenciado' },
@@ -66,37 +75,65 @@ export default function CreateInvoicePage() {
         { value: 'tarjeta-debito', label: 'Tarjeta Débito' },
         { value: 'transferencia-credito', label: 'Transferencia Crédito' },
         { value: 'cheque', label: 'Cheque' },
-        { value: 'transferencia-debito-bancaria', label: 'Transferencia Débito Bancaria' },
         { value: 'consignacion-bancaria', label: 'Consignación Bancaria' },
         { value: 'tarjeta-credito', label: 'Tarjeta Crédito' },
         { value: 'otro', label: 'Otro' },
-        { value: 'transferencia-debito-interbancario', label: 'Transferencia Débito Interbancario' },
-        { value: 'transferencia-credito-bancario', label: 'Transferencia Crédito Bancario' },
-        { value: 'credito-ach', label: 'Crédito ACH' },
     ]
 
     const handleChange = (field: string, value: any) => {
-        setFormData(prev => ({ ...prev, [field]: value }))
+        setFormData(prev => {
+            const newState = { ...prev, [field]: value }
+            if (field === 'paymentType' && value === 'contado') {
+                newState.dueDate = newState.issueDate
+            }
+            if (field === 'issueDate' && prev.paymentType === 'contado') {
+                newState.dueDate = value
+            }
+            return newState
+        })
     }
 
-    const handleSelectClient = (client: any) => {
+    const handleClientTypeChange = (type: 'registered' | 'final') => {
+        if (type === 'final') {
+            setIsConsumerFinal(true)
+            handleChange('customer', CONSUMIDOR_FINAL)
+        } else {
+            setIsConsumerFinal(false)
+            handleChange('customer', null)
+        }
+    }
+
+    const handleSelectClientFromList = (userId: string) => {
+        const user = availableClients.find(u => u._id === userId)
+        if (user) handleChange('customer', user)
+    }
+
+    const handleSelectClientFromDrawer = (client: IUser) => {
+        // 1. Seleccionar el cliente en el formulario
         handleChange('customer', client)
+        setIsConsumerFinal(false)
+        setIsClientDrawerOpen(false)
+
+        // 2. Guardar el nuevo cliente en la lista local y localStorage
+        const newClientList = [...availableClients, client]
+        setAvailableClients(newClientList)
+        
+        // Obtenemos solo los nuevos para guardar en local
+        const currentLocal = JSON.parse(localStorage.getItem('localClients') || '[]')
+        localStorage.setItem('localClients', JSON.stringify([...currentLocal, client]))
+    }
+
+    const applyCreditTerm = (days: number) => {
+        if (formData.paymentType !== 'credito') return
+        const issueDate = new Date(formData.issueDate)
+        const dueDate = new Date(issueDate.setDate(issueDate.getDate() + days))
+        handleChange('dueDate', dueDate.toISOString().split('T')[0])
     }
 
     const handleAddItem = () => {
-        setItems(prev => [
-            ...prev,
-            {
-                _id: `item-${Date.now()}`,
-                name: '',
-                description: '',
-                price: 0,
-                quantity: 1,
-                discount: 0,
-                tax: 0,
-                total: 0,
-            },
-        ])
+        setItems(prev => [...prev, {
+            _id: `item-${Date.now()}`, name: '', description: '', price: 0, quantity: 1, discount: 0, tax: 0, total: 0,
+        }])
     }
 
     const handleRemoveItem = (index: number) => {
@@ -107,379 +144,252 @@ export default function CreateInvoicePage() {
         setItems(prev => {
             const newItems = [...prev]
             newItems[index] = { ...newItems[index], [field]: value }
-
-            // Calcular total del item
+            // Recalcular total se hará en la tabla visualmente, pero aquí actualizamos el state
+            // Nota: En la tabla ya calculamos visualmente, pero es bueno tener el dato 'total' actualizado en el state
             const item = newItems[index]
-            const subtotal = item.price * item.quantity
-            const discount = item.discount || 0
-            const tax = item.tax || 0
-            newItems[index].total = subtotal - discount + tax
-
+            const sub = item.price * item.quantity
+            const disc = (sub * (item.discount || 0)) / 100
+            const tax = ((sub - disc) * (item.tax || 0)) / 100
+            newItems[index].total = sub - disc + tax
             return newItems
         })
     }
 
-    // Calcular totales
     const calculateTotals = () => {
-        const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-        const totalDiscount = items.reduce((sum, item) => sum + (item.discount || 0), 0)
-        const totalTax = items.reduce((sum, item) => sum + (item.tax || 0), 0)
-        const total = subtotal - totalDiscount + totalTax
-
-        return { subtotal, totalDiscount, totalTax, total }
+        // Recalcular todo basado en items
+        let subtotal = 0
+        let totalDiscount = 0
+        let totalTax = 0
+        
+        items.forEach(item => {
+            const sub = item.price * item.quantity
+            const disc = (sub * (item.discount || 0)) / 100
+            const tax = ((sub - disc) * (item.tax || 0)) / 100
+            
+            subtotal += sub
+            totalDiscount += disc
+            totalTax += tax
+        })
+        
+        return { subtotal, totalDiscount, totalTax, total: subtotal - totalDiscount + totalTax }
     }
 
     const totals = calculateTotals()
 
-    const handleSave = () => {
-        console.log('Guardando factura...', { formData, items, totals })
-        // TODO: Implementar guardado
+    const handleSave = async () => {
+        if (!formData.customer) {
+            alert("Por favor seleccione un cliente")
+            return
+        }
+        setIsSaving(true)
+        
+        try {
+            // Construir objeto Factura final
+            // NOTA: Usamos 'any' temporal en conversions para que coincida con IInvoice que espera Dates
+            // saveInvoice generará el ID y createdAt
+            const invoiceData: any = {
+                invoiceNumber: `TW${Math.floor(Math.random() * 9000) + 1000}`, // Generar número aleatorio para demo
+                institute: 'inst-001',
+                student: formData.customer, // Asumimos student = customer para este caso
+                customer: formData.customer,
+                issueDate: new Date(formData.issueDate),
+                dueDate: new Date(formData.dueDate),
+                currency: formData.currency as any,
+                paymentMethod: formData.paymentMethod as any,
+                paymentType: formData.paymentType as any,
+                purchaseOrder: formData.purchaseOrder,
+                invoiceItems: items,
+                subtotal: totals.subtotal,
+                totalDiscount: totals.totalDiscount,
+                totalTax: totals.totalTax,
+                total: totals.total,
+                notes: formData.notes,
+                status: 'pending', // Por defecto pendiente
+                createdAt: new Date(),
+                updatedAt: new Date()
+            }
+
+            // GUARDAR EN LOCALSTORAGE USANDO TU UTILITY
+            saveInvoice(invoiceData)
+
+            setTimeout(() => {
+                setIsSaving(false)
+                router.push('/invoices') // Volver a la lista
+            }, 800)
+        } catch (error) {
+            console.error(error)
+            setIsSaving(false)
+            alert("Error al guardar")
+        }
     }
 
+    const SafeDivider = () => <Box h="1px" bg="gray.100" w="full" my={6} />
+
     return (
-        <Box minH="100vh" bg="purple.100" py={4}>
+        <Box minH="100vh" bg="purple.50" py={8}>
             <Container maxW="container.xl">
-                {/* Header */}
-                <Flex justify="space-between" align="center" mb={6}>
-                    <Flex align="center" gap={3}>
-                        <Button
-                            variant="outline"
-                            colorScheme="purple"
+                {/* HEADER */}
+                <Flex justify="space-between" align="center" mb={8}>
+                    <Flex align="center" gap={4}>
+                        <IconButton
+                            aria-label="Volver" variant="ghost" colorPalette="gray" bg="white" shadow="sm" size="md" rounded="full"
                             onClick={() => router.push('/invoices')}
-                            size="md"
-                            fontWeight="600"
-                            borderWidth="2px"
-                            _hover={{
-                                bg: 'purple.50',
-                                transform: 'translateX(-4px)',
-                                borderColor: 'purple.600'
-                            }}
-                            transition="all 0.2s"
+                            _hover={{ bg: 'purple.100', color: 'purple.600', transform: 'translateX(-2px)' }}
                         >
-                            <ArrowLeft size={18} style={{ marginRight: '8px' }} />
-                            Volver
+                            <ArrowLeft size={20} />
+                        </IconButton>
+                        <Box>
+                            <Heading size="xl" color="purple.500" fontWeight="700" lineHeight="1.1">Nueva Factura</Heading>
+                            <Flex align="center" gap={2} color="gray.500" fontSize="sm">
+                                <FileText size={14}/>
+                                <Text>Complete la información para generar el documento</Text>
+                            </Flex>
+                        </Box>
+                    </Flex>
+                    <Flex gap={3}>
+                        <Button variant="subtle" colorPalette="gray" fontWeight="600" onClick={() => router.push('/invoices')}>Cancelar</Button>
+                        <Button colorPalette="purple" size="md" fontWeight="bold" shadow="md" loading={isSaving} loadingText="Guardando..." onClick={handleSave} _hover={{ transform: 'translateY(-1px)', shadow: 'lg' }}>
+                            <Save size={18} style={{ marginRight: '8px' }} /> Guardar Factura
                         </Button>
                     </Flex>
-
-                    <Button
-                        colorScheme="green"
-                        size="lg"
-                        onClick={handleSave}
-                    >
-                        <Save size={18} style={{ marginRight: '8px' }} />
-                        Guardar Factura
-                    </Button>
                 </Flex>
 
-                {/* TARJETA UNIFICADA - Todo en una sola card */}
-                <Card.Root bg="white" shadow="sm" borderRadius="lg" overflow="hidden">
+                {/* FORMULARIO */}
+                <Card.Root bg="white" shadow="md" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="gray.100">
                     <Card.Body p={0}>
-                        <Stack gap={0} divideY="1px" divideColor="gray.200">
-                            <Heading size="xl" color="purple.600" mb={1}>
-                                Nueva Factura
-                            </Heading>
-                            {/* Sección 1: Tipo de factura y moneda */}
-                            <Box p={6}>
+                        <Stack gap={0} divideY="1px" divideColor="gray.100">
+                            
+                            {/* 1. GENERAL */}
+                            <Box p={8}>
+                                <Text fontSize="xs" fontWeight="bold" color="purple.600" mb={4} textTransform="uppercase" letterSpacing="wider">Información General</Text>
                                 <Flex gap={6} flexDirection={{ base: 'column', md: 'row' }}>
-                                    {/* Tipo de factura */}
                                     <Box flex={1}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Tipo de factura
-                                        </Text>
-                                        <select
-                                            value={formData.invoiceType}
-                                            onChange={(e) => handleChange('invoiceType', e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 12px',
-                                                fontSize: '14px',
-                                                border: '1px solid #E2E8F0',
-                                                borderRadius: '6px',
-                                                backgroundColor: 'white',
-                                            }}
-                                        >
-                                            {invoiceTypes.map((type) => (
-                                                <option key={type.value} value={type.value}>
-                                                    {type.label}
-                                                </option>
-                                            ))}
+                                        <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Tipo de documento</Text>
+                                        <select value={formData.invoiceType} onChange={(e) => handleChange('invoiceType', e.target.value)} style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white', outline: 'none' }}>
+                                            {invoiceTypes.map((type) => (<option key={type.value} value={type.value}>{type.label}</option>))}
                                         </select>
                                     </Box>
+                                    <Box w={{ base: '100%', md: '250px' }}>
+                                        <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Moneda</Text>
+                                        <select value={formData.currency} onChange={(e) => handleChange('currency', e.target.value)} style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white', outline: 'none' }}>
+                                            <option value="COP">Pesos Colombianos (COP)</option>
+                                            <option value="USD">Dólar Americano (USD)</option>
+                                            <option value="EUR">Euro (EUR)</option>
+                                        </select>
+                                    </Box>
+                                </Flex>
+                            </Box>
 
-                                    {/* Moneda */}
-                                    <Box w={{ base: '100%', md: '200px' }}>
-                                        <Flex align="center" gap={2} mb={2}>
-                                            <Text fontSize="xs" fontWeight="600" color="gray.600" textTransform="uppercase">
-                                                Moneda
-                                            </Text>
-                                            <Box
-                                                as="span"
-                                                fontSize="xs"
-                                                color="blue.500"
-                                                cursor="pointer"
-                                            >
-                                                ℹ️
+                            {/* 2. CLIENTE */}
+                            <Box p={8} bg="gray.50" position="relative">
+                                {formData.currency !== 'COP' && (
+                                    <Box mb={6} p={3} bg="blue.50" border="1px solid" borderColor="blue.200" borderRadius="lg" animation="fade-in 0.3s">
+                                        <Flex align="center" gap={3}>
+                                            <Badge colorPalette="blue" variant="solid" px={2}>TRM HOY</Badge>
+                                            <Text fontSize="sm" color="blue.800" fontWeight="600">1 {formData.currency} = ${EXCHANGE_RATES[formData.currency].toLocaleString('es-CO')} COP</Text>
+                                        </Flex>
+                                    </Box>
+                                )}
+
+                                <Flex gap={8} flexDirection={{ base: 'column', lg: 'row' }}>
+                                    <Box flex={1}>
+                                        <Flex justify="space-between" mb={3} align="center">
+                                            <Text fontSize="xs" fontWeight="bold" color="purple.600" textTransform="uppercase" letterSpacing="wider">Datos del Cliente</Text>
+                                            <Flex bg="white" borderRadius="md" border="1px solid" borderColor="gray.200" p={1} gap={1}>
+                                                <Button size="xs" variant={!isConsumerFinal ? 'solid' : 'ghost'} colorPalette={!isConsumerFinal ? 'purple' : 'gray'} onClick={() => handleClientTypeChange('registered')}><User size={14} style={{marginRight: '4px'}}/> Cliente</Button>
+                                                <Button size="xs" variant={isConsumerFinal ? 'solid' : 'ghost'} colorPalette={isConsumerFinal ? 'purple' : 'gray'} onClick={() => handleClientTypeChange('final')}>Consumidor Final</Button>
+                                            </Flex>
+                                        </Flex>
+                                        
+                                        <Flex gap={2}>
+                                            <select disabled={isConsumerFinal} value={formData.customer?._id || ""} onChange={(e) => handleSelectClientFromList(e.target.value)} style={{ flex: 1, padding: '10px 12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: isConsumerFinal ? '#EDF2F7' : 'white', color: isConsumerFinal ? '#A0AEC0' : 'inherit', cursor: isConsumerFinal ? 'not-allowed' : 'pointer', outline: 'none' }}>
+                                                <option value="" disabled>{isConsumerFinal ? "Consumidor Final (222222222222)" : "Seleccione un cliente..."}</option>
+                                                {!isConsumerFinal && availableClients.map(user => (<option key={user._id} value={user._id}>{user.name}</option>))}
+                                            </select>
+                                            <IconButton aria-label="Crear cliente" colorPalette="purple" variant="outline" disabled={isConsumerFinal} onClick={() => setIsClientDrawerOpen(true)}><Plus size={20} /></IconButton>
+                                        </Flex>
+                                        {formData.customer && (<Text fontSize="xs" color="gray.500" mt={2} ml={1}>{isConsumerFinal ? 'NIT Genérico: 222222222222' : `Email: ${formData.customer.email}`}</Text>)}
+                                    </Box>
+
+                                    <Flex gap={4} w={{ base: '100%', lg: 'auto' }} direction="column">
+                                        <Flex gap={4}>
+                                            <Box w="180px">
+                                                <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Fecha Emisión</Text>
+                                                <Input type="date" bg="white" value={formData.issueDate} onChange={(e) => handleChange('issueDate', e.target.value)} />
+                                            </Box>
+                                            <Box w="180px">
+                                                <Flex justify="space-between" mb={1.5}>
+                                                    <Text fontSize="sm" fontWeight="500" color="gray.700">Vencimiento</Text>
+                                                    {formData.paymentType === 'contado' && (<Badge colorPalette="green" size="sm" variant="surface">Contado</Badge>)}
+                                                </Flex>
+                                                <Input type="date" bg={formData.paymentType === 'contado' ? 'gray.100' : 'white'} value={formData.dueDate} readOnly={formData.paymentType === 'contado'} onChange={(e) => handleChange('dueDate', e.target.value)} />
                                             </Box>
                                         </Flex>
-                                        <Flex align="center" gap={2}>
-                                            <Text fontSize="lg" fontWeight="700">
-                                                {formData.currency}
-                                            </Text>
-                                            <Text
-                                                fontSize="sm"
-                                                color="blue.500"
-                                                cursor="pointer"
-                                                textDecoration="underline"
-                                                onClick={() => {
-                                                    const currencies = ['COP', 'USD', 'EUR']
-                                                    const currentIndex = currencies.indexOf(formData.currency)
-                                                    const nextCurrency = currencies[(currentIndex + 1) % currencies.length]
-                                                    handleChange('currency', nextCurrency)
-                                                }}
-                                            >
-                                                Editar
-                                            </Text>
-                                        </Flex>
-                                    </Box>
+                                        {formData.paymentType === 'credito' && (
+                                            <Flex gap={2} justify="flex-end" animation="fade-in 0.3s">
+                                                <Button size="xs" variant="outline" onClick={() => applyCreditTerm(30)}>30 días</Button>
+                                                <Button size="xs" variant="outline" onClick={() => applyCreditTerm(60)}>60 días</Button>
+                                                <Button size="xs" variant="outline" onClick={() => applyCreditTerm(90)}>90 días</Button>
+                                            </Flex>
+                                        )}
+                                    </Flex>
                                 </Flex>
                             </Box>
 
-                            {/* Sección 2: Cliente y fechas */}
-                            <Box p={6}>
-                                <Flex gap={6} flexDirection={{ base: 'column', lg: 'row' }}>
-                                    {/* Cliente */}
-                                    <Box flex={1}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Cliente
-                                        </Text>
-                                        <Flex gap={2}>
-                                            {formData.customer ? (
-                                                <Box
-                                                    flex={1}
-                                                    p={3}
-                                                    border="1px solid"
-                                                    borderColor="blue.200"
-                                                    borderRadius="md"
-                                                    bg="blue.50"
-                                                >
-                                                    <Text fontSize="sm" fontWeight="600" color="gray.800">
-                                                        {formData.customer.name}
-                                                    </Text>
-                                                    <Text fontSize="xs" color="gray.600">
-                                                        {formData.customer.email}
-                                                    </Text>
-                                                </Box>
-                                            ) : (
-                                                <Input
-                                                    placeholder="Seleccione Cliente"
-                                                    flex={1}
-                                                    cursor="pointer"
-                                                    onClick={() => setIsClientDrawerOpen(true)}
-                                                    readOnly
-                                                />
-                                            )}
-                                            <Button
-                                                colorScheme="blue"
-                                                onClick={() => setIsClientDrawerOpen(true)}
-                                            >
-                                                {formData.customer ? 'Cambiar' : 'Nuevo'}
-                                            </Button>
-                                        </Flex>
-                                    </Box>
-
-                                    {/* Fecha Emisión */}
-                                    <Box w={{ base: '100%', md: '220px' }}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Fecha emisión
-                                        </Text>
-                                        <Input
-                                            type="date"
-                                            value={formData.issueDate}
-                                            onChange={(e) => handleChange('issueDate', e.target.value)}
-                                        />
-                                    </Box>
-
-                                    {/* Fecha Vencimiento */}
-                                    <Box w={{ base: '100%', md: '220px' }}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Fecha vencimiento
-                                        </Text>
-                                        <Input
-                                            type="date"
-                                            value={formData.dueDate}
-                                            onChange={(e) => handleChange('dueDate', e.target.value)}
-                                        />
-                                        <Flex gap={2} mt={2}>
-                                            <Button
-                                                size="xs"
-                                                variant="outline"
-                                                colorScheme="gray"
-                                                fontSize="xs"
-                                            >
-                                                30
-                                            </Button>
-                                            <Button
-                                                size="xs"
-                                                variant="outline"
-                                                colorScheme="gray"
-                                                fontSize="xs"
-                                            >
-                                                60
-                                            </Button>
-                                            <Button
-                                                size="xs"
-                                                variant="outline"
-                                                colorScheme="gray"
-                                                fontSize="xs"
-                                            >
-                                                90
-                                            </Button>
-                                        </Flex>
-                                    </Box>
-                                </Flex>
-                            </Box>
-
-                            {/* Sección 3: Método de pago y orden de compra */}
-                            <Box p={6}>
-                                <Flex gap={6} flexDirection={{ base: 'column', md: 'row' }} mb={4}>
-                                    {/* Método de pago */}
-                                    <Box flex={1}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Método de pago
-                                        </Text>
-                                        <select
-                                            value={formData.paymentMethod}
-                                            onChange={(e) => handleChange('paymentMethod', e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 12px',
-                                                fontSize: '14px',
-                                                border: '1px solid #E2E8F0',
-                                                borderRadius: '6px',
-                                                backgroundColor: 'white',
-                                            }}
-                                        >
-                                            {paymentMethods.map((method) => (
-                                                <option key={method.value} value={method.value}>
-                                                    {method.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </Box>
-
-                                    {/* Tipo de pago */}
-                                    <Box flex={1}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Tipo de pago
-                                        </Text>
-                                        <select
-                                            value={formData.paymentType}
-                                            onChange={(e) => handleChange('paymentType', e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                padding: '10px 12px',
-                                                fontSize: '14px',
-                                                border: '1px solid #E2E8F0',
-                                                borderRadius: '6px',
-                                                backgroundColor: 'white',
-                                            }}
-                                        >
+                            {/* 3. PAGO */}
+                            <Box p={8}>
+                                <Text fontSize="xs" fontWeight="bold" color="purple.600" mb={4} textTransform="uppercase" letterSpacing="wider">Detalles de Pago</Text>
+                                <Grid templateColumns={{ base: "1fr", md: "1fr 1fr 1fr" }} gap={6}>
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Tipo de pago</Text>
+                                        <select value={formData.paymentType} onChange={(e) => handleChange('paymentType', e.target.value)} style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white', outline: 'none' }}>
                                             <option value="contado">Contado</option>
                                             <option value="credito">Crédito</option>
                                         </select>
                                     </Box>
-                                </Flex>
-
-                                {/* Orden de compra */}
-                                <Box>
-                                    <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                        Orden de compra
-                                    </Text>
-                                    <Input
-                                        placeholder="Número de orden de compra (opcional)"
-                                        value={formData.purchaseOrder}
-                                        onChange={(e) => handleChange('purchaseOrder', e.target.value)}
-                                    />
-                                </Box>
-                            </Box>
-
-                            {/* Sección 4: Items de la factura */}
-                            <Box p={6}>
-                                <InvoiceItemsTable
-                                    items={items}
-                                    onUpdateItem={handleUpdateItem}
-                                    onAddItem={handleAddItem}
-                                    onRemoveItem={handleRemoveItem}
-                                />
-                            </Box>
-
-                            {/* Sección 5: Resumen y totales */}
-                            <Box p={6}>
-                                <Flex justify="space-between" gap={6} flexDirection={{ base: 'column', md: 'row' }}>
-                                    {/* Notas */}
-                                    <Box flex={1}>
-                                        <Text fontSize="xs" fontWeight="600" mb={2} color="black.100" textTransform="uppercase">
-                                            Notas
-                                        </Text>
-                                        <textarea
-                                            placeholder="Agregar notas o comentarios adicionales..."
-                                            value={formData.notes}
-                                            onChange={(e) => handleChange('notes', e.target.value)}
-                                            style={{
-                                                width: '100%',
-                                                minHeight: '100px',
-                                                padding: '10px',
-                                                fontSize: '14px',
-                                                border: '1px solid #E2E8F0',
-                                                borderRadius: '6px',
-                                                resize: 'vertical',
-                                                fontFamily: 'inherit',
-                                            }}
-                                        />
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Método de pago</Text>
+                                        <select value={formData.paymentMethod} onChange={(e) => handleChange('paymentMethod', e.target.value)} style={{ width: '100%', padding: '10px 12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white', outline: 'none' }}>
+                                            {paymentMethods.map((method) => (<option key={method.value} value={method.value}>{method.label}</option>))}
+                                        </select>
                                     </Box>
+                                    <Box>
+                                        <Text fontSize="sm" fontWeight="500" mb={1.5} color="gray.700">Orden de Compra</Text>
+                                        <Input placeholder="Opcional" value={formData.purchaseOrder} onChange={(e) => handleChange('purchaseOrder', e.target.value)} />
+                                    </Box>
+                                </Grid>
+                            </Box>
 
-                                    {/* Totales */}
-                                    <Box w={{ base: '100%', md: '350px' }}>
-                                        <Stack gap={3}>
-                                            <Flex justify="space-between">
-                                                <Text fontSize="sm" color="black.100">Subtotal</Text>
-                                                <Text fontSize="sm" fontWeight="600">
-                                                    ${totals.subtotal.toLocaleString('es-CO')}
-                                                </Text>
-                                            </Flex>
+                            {/* 4. ITEMS */}
+                            <Box p={8} bg="white">
+                                <Text fontSize="xs" fontWeight="bold" color="purple.600" mb={4} textTransform="uppercase" letterSpacing="wider">Items de la factura</Text>
+                                <InvoiceItemsTable items={items} onUpdateItem={handleUpdateItem} onAddItem={handleAddItem} onRemoveItem={handleRemoveItem} />
+                            </Box>
 
-                                            <Flex justify="space-between" align="center">
-                                                <Text fontSize="sm" color="blue.500" cursor="pointer">
-                                                    + Cargo / Descuento
-                                                </Text>
-                                            </Flex>
-
-                                            <Box h="1px" bg="gray.200" />
-
-                                            <Flex justify="space-between">
-                                                <Text fontSize="lg" fontWeight="700" color="gray.800">
-                                                    Total
-                                                </Text>
-                                                <Text fontSize="lg" fontWeight="700" color="blue.600">
-                                                    ${totals.total.toLocaleString('es-CO')}
-                                                </Text>
-                                            </Flex>
+                            {/* 5. TOTALES */}
+                            <Box p={8} bg="gray.50">
+                                <Flex justify="space-between" gap={8} flexDirection={{ base: 'column', md: 'row' }}>
+                                    <Box flex={1}>
+                                        <Text fontSize="sm" fontWeight="500" mb={2} color="gray.700">Notas / Comentarios</Text>
+                                        <textarea placeholder="Información adicional para el cliente..." value={formData.notes} onChange={(e) => handleChange('notes', e.target.value)} style={{ width: '100%', minHeight: '120px', padding: '12px', fontSize: '14px', border: '1px solid #E2E8F0', borderRadius: '8px', backgroundColor: 'white', resize: 'vertical', fontFamily: 'inherit' }} />
+                                    </Box>
+                                    <Box w={{ base: '100%', md: '380px' }} bg="white" p={6} borderRadius="lg" shadow="sm" border="1px solid" borderColor="gray.100">
+                                        <Stack gap={4}>
+                                            <Flex justify="space-between" align="center"><Text color="gray.500">Subtotal</Text><Text fontWeight="600" fontSize="lg">${totals.subtotal.toLocaleString('es-CO')}</Text></Flex>
+                                            <Flex justify="space-between" align="center"><Text color="gray.500">Descuentos</Text><Text fontWeight="500" color="red.500">-${totals.totalDiscount.toLocaleString('es-CO')}</Text></Flex>
+                                            <Flex justify="space-between" align="center"><Text color="gray.500">Impuestos</Text><Text fontWeight="500">+${totals.totalTax.toLocaleString('es-CO')}</Text></Flex>
+                                            <SafeDivider />
+                                            <Flex justify="space-between" align="center"><Text fontSize="lg" fontWeight="800" color="purple.900">Total a Pagar ({formData.currency})</Text><Text fontSize="2xl" fontWeight="800" color="purple.600">${totals.total.toLocaleString('es-CO')}</Text></Flex>
                                         </Stack>
                                     </Box>
                                 </Flex>
                             </Box>
-
                         </Stack>
                     </Card.Body>
                 </Card.Root>
             </Container>
 
-            {/* Client Drawer */}
-            <ClientDrawer
-                isOpen={isClientDrawerOpen}
-                onClose={() => setIsClientDrawerOpen(false)}
-                onSelectClient={handleSelectClient}
-            />
+            <ClientDrawer isOpen={isClientDrawerOpen} onClose={() => setIsClientDrawerOpen(false)} onSelectClient={handleSelectClientFromDrawer} />
         </Box>
     )
 }
