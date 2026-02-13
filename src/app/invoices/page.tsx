@@ -89,7 +89,7 @@ export default function InvoicesPage() {
     }, [filteredInvoices, currentPage])
 
     // --- DATOS PARA LA GRÁFICA DE REPORTES ---
-    const maxChartValue = Math.max(stats.paid || 0, stats.pending || 0, stats.sent || 0, stats.problem || 0, 1);
+    const maxChartValue = Math.max(stats.rejected || 0, stats.pending || 0, stats.sent || 0, stats.problem || 0, 1);
 
     return (
         <Box minH="200vh" bg="purple.100" py={8}>
@@ -112,7 +112,7 @@ export default function InvoicesPage() {
 
                         {/* Gráfica CSS */}
                         <Flex h="200px" align="flex-end" justify="space-around" borderBottom="2px solid" borderColor="gray.200" pb={2} pt={4}>
-                            <ChartBar label="Pagadas" value={stats.paid} max={maxChartValue} color="green.400" />
+                            <ChartBar label="Pagadas" value={stats.rejected} max={maxChartValue} color="green.400" />
                             <ChartBar label="Pendientes" value={stats.pending} max={maxChartValue} color="orange.400" />
                             <ChartBar label="Enviadas" value={stats.sent} max={maxChartValue} color="blue.400" />
                             <ChartBar label="Vencidas" value={stats.problem} max={maxChartValue} color="red.400" />
