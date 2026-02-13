@@ -159,7 +159,7 @@ export default function InvoicesPage() {
                 <Box bg="purple.200" borderRadius="xl" boxShadow="sm" overflow="hidden">
                     <InvoiceTable
                         invoices={currentInvoices}
-                        isLoading={isLoading}
+
                         dateSortOrder={dateSortOrder}
                         onToggleSort={() => setDateSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
                     />

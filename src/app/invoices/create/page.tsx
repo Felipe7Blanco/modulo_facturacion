@@ -562,12 +562,12 @@ export default function CreateInvoicePage() {
                     >
                         Cancelar
                     </Button>
-                    <Button 
+                   <Button 
                         colorPalette="purple" 
                         size="md" 
                         fontWeight="bold" 
                         shadow="md" 
-                        loading={isSaving} 
+                       
                         loadingText="Guardando..." 
                         onClick={handleSave} 
                         _hover={{ transform: 'translateY(-2px)', shadow: 'lg' }}
