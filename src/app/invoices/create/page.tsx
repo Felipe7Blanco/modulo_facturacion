@@ -563,7 +563,7 @@ export default function CreateInvoicePage() {
                         Cancelar
                     </Button>
                    <Button 
-                        colorPalette="purple" 
+                        
                         size="md" 
                         fontWeight="bold" 
                         shadow="md" 
